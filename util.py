@@ -53,10 +53,20 @@ def calculate_lane(shape, lane_points, left=True):
     else:
         bound = min(x for x, y in lane_points)
 
-    bottom_point = ((shape[0] - y0) * vx / vy + x0, shape[0])
-    top_point = (bound, (bound - x0) * vy / vx + y0)
+    bottom_point = (int((shape[0] - y0[0]) * vx[0] / vy[0] + x0[0]), shape[0])
+    top_point = (bound, int((bound - x0[0]) * vy[0] / vx[0] + y0[0]))
 
     return top_point, bottom_point
+
+avg_top_left_lane = None
+avg_bottom_left_lane = None
+avg_top_right_lane = None
+avg_bottom_right_lane = None
+alpha = 0.5 # Confluence by Vivek Yadav, tried average first (alpha=0.5), not too much difference between both
+
+
+def weighted_average(x, y):
+    return int(x * (1 - alpha) + y * alpha)
 
 
 def draw_lines(img, lines, color=[255, 0, 0], thickness=7):
@@ -76,6 +86,9 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=7):
     If you want to make the lines semi-transparent, think about combining
     this function with the weighted_img() function below
     """
+    global avg_top_left_lane, avg_bottom_left_lane
+    global avg_top_right_lane, avg_bottom_right_lane
+
     left_lane_points = []
     right_lane_points = []
     shape = img.shape
@@ -90,11 +103,27 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=7):
                 right_lane_points.append((x1, y1))
                 right_lane_points.append((x2, y2))
 
-    left_lane = calculate_lane(img.shape, left_lane_points)
-    right_lane = calculate_lane(img.shape, right_lane_points, False)
+    if len(left_lane_points) > 0:
+        top_left_lane, bottom_left_lane = calculate_lane(img.shape, left_lane_points)
+        if avg_top_left_lane is None and avg_bottom_left_lane is None:
+            avg_top_left_lane = top_left_lane
+            avg_bottom_left_lane = bottom_left_lane
+        else:
+            avg_top_left_lane = tuple(map(weighted_average, avg_top_left_lane, top_left_lane))
+            avg_bottom_left_lane = tuple(map(weighted_average, avg_bottom_left_lane, bottom_left_lane))
 
-    cv2.line(img, left_lane[0], left_lane[1], color, thickness)
-    cv2.line(img, right_lane[0], right_lane[1], color, thickness)
+        cv2.line(img, avg_top_left_lane, avg_bottom_left_lane, color, thickness)
+
+    if len(right_lane_points) > 0:
+        top_right_lane, bottom_right_lane = calculate_lane(img.shape, right_lane_points, False)
+        if avg_bottom_right_lane is None and avg_top_right_lane is None:
+            avg_top_right_lane = top_right_lane
+            avg_bottom_right_lane = bottom_right_lane
+        else:
+            avg_bottom_right_lane = tuple(map(weighted_average, avg_bottom_right_lane, bottom_right_lane))
+            avg_top_right_lane = tuple(map(weighted_average, avg_top_right_lane, top_right_lane))
+
+        cv2.line(img, avg_top_right_lane, avg_bottom_right_lane, color, thickness)
 
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):

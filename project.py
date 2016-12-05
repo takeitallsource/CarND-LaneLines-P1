@@ -15,7 +15,15 @@ from moviepy.editor import VideoFileClip
 #
 #     plt.imshow(u.pipeline(image))
 #     plt.show()
+# for file in os.listdir('.'):
+#     if file.endswith('.mp4'):
 
-clip = VideoFileClip("solidWhiteRight.mp4")
-white_clip = clip.fl_image(u.pipeline)
-white_clip.write_videofile("white.mp4", audio=False)
+import os
+for file in os.listdir("test_images/"):
+    image = cv2.imread('test_images/' + file)
+    marked_image = u.pipeline(image)
+    cv2.imwrite('test_images/' + 'marked-' + file, marked_image)
+
+# clip = VideoFileClip('challenge.mp4')
+# white_clip = clip.fl_image(u.pipeline)
+# white_clip.write_videofile('marked/marked-' + 'challenge.mp4', audio=False)
